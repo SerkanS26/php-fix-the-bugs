@@ -6,10 +6,10 @@ $sports = ['Football', 'Tennis', 'Ping pong', 'Volley ball', 'Rugby', 'Horse rid
 function openConnection(): PDO
 {
     // No bugs in this function, just use the right credentials.
-    $dbhost = "DB_HOST";
-    $dbuser = "DB_USER";
-    $dbpass = "DB_USER_PASSWORD";
-    $db = "DB_NAME";
+    $dbhost = "****";
+    $dbuser = "****";
+    $dbpass = "****";
+    $db = "****";
 
     $driverOptions = [
         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'",
@@ -24,12 +24,12 @@ $pdo = openConnection();
 
 if(!empty($_POST['firstname']) && !empty($_POST['lastname'])) {
     //@todo possible bug below?
-    if(!empty($_POST['id'])) {
+    if(empty($_POST['id'])) {
         $handle = $pdo->prepare('INSERT INTO user (firstname, lastname, year) VALUES (:firstname, :lastname, :year)');
         $message = 'Your record has been added';
     } else {
         //@todo why does this not work?
-        $handle = $pdo->prepare('UPDATE user VALUES (firstname = :firstname, lastname = :lastname, year = :year) WHERE id = :id');
+        $handle = $pdo->prepare('UPDATE user SET firstname = :firstname, lastname = :lastname, year = :year WHERE id = :id');
         $handle->bindValue(':id', $_POST['id']);
         $message = 'Your record has been updated';
     }
@@ -45,13 +45,12 @@ if(!empty($_POST['firstname']) && !empty($_POST['lastname'])) {
         $handle->execute();
         $userId = $_POST['id'];
     } else {
+        $userId = $pdo->lastInsertId();
         //why did I leave this if empty? There must be no important reason for this. Move on.
     }
 
     //@todo Why does this loop not work? If only I could see the bigger picture.
     foreach($_POST['sports'] AS $sport) {
-        $userId = $pdo->lastInsertId();
-
         $handle = $pdo->prepare('INSERT INTO sport (user_id, sport) VALUES (:userId, :sport)');
         $handle->bindValue(':userId', $userId);
         $handle->bindValue(':sport', $sport);
@@ -60,16 +59,16 @@ if(!empty($_POST['firstname']) && !empty($_POST['lastname'])) {
 }
 elseif(isset($_POST['delete'])) {
     //@todo BUG? Why does always delete all my users?
-    $handle = $pdo->prepare('DELETE FROM user');
+    $handle = $pdo->prepare('DELETE FROM user WHERE id = :id');
     //The line below just gave me an error, probably not important. Annoying line.
-    //$handle->bindValue(':id', $_POST['id']);
+    $handle->bindValue(':id', $_POST['id']);
     $handle->execute();
 
     $message = 'Your record has been deleted';
 }
 
 //@todo Invalid query?
-$handle = $pdo->prepare('SELECT id, concat_ws(firstname, lastname, " ") AS name, sport FROM user LEFT JOIN sport ON id = sport.user_id where year = :year order by sport');
+$handle = $pdo->prepare('SELECT user.id, concat_ws(" ", firstname, lastname) AS name, sport FROM user LEFT JOIN sport ON sport.user_id = user.id where year = :year order by sport');
 $handle->bindValue(':year', date('Y'));
 $handle->execute();
 $users = $handle->fetchAll();
@@ -89,7 +88,7 @@ if(!empty($_GET['id'])) {
     $handle->bindValue(':id', $_GET['id']);
     $handle->execute();
     foreach($handle->fetchAll() AS $sport) {
-        $selectedUser['sports'][] = $sport;//@todo I just want an array of all sports of this, why is it not working?
+        $selectedUser['sports'][] = $sport['sport'];//@todo I just want an array of all sports of this, why is it not working?
     }
 }
 
